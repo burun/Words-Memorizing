@@ -1,228 +1,144 @@
-from django.shortcuts import render
-from django.http import HttpResponseRedirect
+# from django.contrib.auth.decorators import login_required
+from django.http import HttpResponseRedirect, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, render
+from django.views.decorators.csrf import csrf_protect
 from django.template import RequestContext
-from django.db.models import Q
-from django.contrib.auth.decorators import user_passes_test
-import gdata
-import gdata.spreadsheet
-import gdata.spreadsheet.service
-from wordmuse.flashcards.models import Word, Tag, Deck
-import csv
+
+# from forms import RatingForm
+from flashcard.models import FlashCard
+# from forms import FlashCardForm
 
 
-def words(request):
-    words = Word.objects.order_by('name')
-    return render(request, 'words.html', {'words': words})
+# @login_required
+def list_flashcards(request):
+    """
+    Return a list with flash cards.
+    """
+    flashcard_list = FlashCard.objects.filter(user=request.user)
+    context_dict = {
+        'flashcard_list': flashcard_list
+    }
+
+    return render(request, 'flashcard/list_flashcards.html', context_dict)
 
 
-def word(request, word):
-    try:
-        dbword = Word.objects.get(name=word)
-        tags = dbword.tags.order_by('name')
-        sibs = dbword.siblings.order_by('name')
-    except:
-        return HttpResponseRedirect('/words')
-    return render(request, 'word.html', {'word': dbword, 'tags': tags, 'siblings': sibs})
+# @login_required
+def show_details_about(request, request_id):
+    """
+    Show the details about a flashcard, given the ID.
+    """
+    queryset = get_object_or_404(FlashCard.objects.filter(id=request_id))
+    context_dict = {
+        'object_detail': queryset,
+        'object_id': request_id
+    }
+
+    return render(request, 'flashcard/show_details.html', context_dict)
 
 
-def tags(request):
-    tags = Tag.objects.order_by('name')
-    return render(request, 'tags.html', {'tags': tags})
+# @login_required
+# @csrf_protect
+# def create_flashcard(request, template_name='create_flashcard.html'):
+#     """
+#     Return a form for creating a flashcard.
+#     """
+#     if request.method == "POST":
+#         formset = FlashCardForm(data=request.POST)
+#         if formset.is_valid():
+#             formset.instance.user = request.user
+#             formset.save()
+# Redirect to the flashcard list index.
+#             return redirect(to='list_flashcards')
+#     else:
+#         formset = FlashCardForm()
+
+#     return_dict = {
+#         'formset': formset
+#     }
+
+#     return render_to_response(template_name, return_dict,
+#                               context_instance=RequestContext(request))
 
 
-def tag(request, tag):
-    try:
-        dbtag = Tag.objects.get(name=tag)
-        words = dbtag.word_set.order_by('name')
-    except:
-        return HttpResponseRedirect('/tags')
-    # for word in words:
-    #  print "checking word %s " % word
-    #  valid_sibs = words & word.siblings.all()
-    #  for sib in valid_sibs:
-        #  print sib
-    return render(request, 'tag.html', {'tag': dbtag, 'words': words})
+# @login_required
+# @csrf_protect
+# def edit_flashcard(request, flashcard_id, template_name='edit_flashcard.html'):
+#     """
+#     Edit a flashcard.
+#     """
+#     flashcard = get_object_or_404(FlashCard, pk=flashcard_id)
+#     if request.method == "POST":
+#         form = FlashCardForm(instance=flashcard, data=request.POST)
+#         if form.is_valid():
+#             flashcard = form.save()
+#             return HttpResponseRedirect(flashcard.get_absolute_url())
+#     else:
+#         form = FlashCardForm(instance=flashcard)
+
+#     return_dict = {
+#         'form': form
+#     }
+#     return render_to_response(template_name, return_dict,
+#                               context_instance=RequestContext(request))
 
 
-def deck(request, name=""):
-    # try:
-    #  deck = Deck.objects.get(name=name)
-    #  left = deck.left.all()
-    #  right = deck.right.all()
-    # except:
-    #  return HttpResponseRedirect('/words')
-    tags = Tag.objects.all()
-    return render(request, 'deck.html', {'tags': tags})
+# @login_required
+# def delete_flashcard(request, flashcard_id):
+#     """
+#     Delete a flashcard given the `ID`.
+#     """
+#     FlashCard.objects.filter(id=flashcard_id).delete()
+
+# return redirect('list_flashcards')  # Redirect to the flashcard list
 
 
-def play(request):
-    # try:
-    # deck = Deck.objects.get(name=name)
-    # left = deck.left.all()
-    # right = deck.right.all()
-    left = request.POST.getlist('left')
-    right = request.POST.getlist('right')
+# @login_required
+def practice_flashcards(request, mode=''):
+    """
+    Practice a flashcard.
+    """
+    # Get the latest element you should practice
+    practices = FlashCard.by_practice.filter(user=request.user)
+    if len(practices) == 0:
+        return render(request, 'flashcard/practice_flashcards.html', {
+            'errors': ['No items to practice']},
+            context_instance=RequestContext(request))
 
-    leftwords = Word.objects.filter(tags__name=left[0])
-    for ltag in left:
-        # todo: currently this does left[0] twice, which doesn't matter but is
-        # inefficient
-        leftwords = leftwords.filter(tags__name=ltag)
-    # print leftwords
+    practice = practices[0]
+    # form = RatingForm(initial={'id': practice.id})
 
-    cards = []
-    for word in leftwords:
-        # print "processing word %s.  siblings:" % word
-        # print word.siblings.all()
-        # rightword = getsiblingwithtag(word.siblings.all(), right)
-        rightwords = word.siblings.filter(tags__name=right[0])
-        # print "looking for sibling with tag %s" % right[0]
-        for rtag in right:
-            # todo: doing right[0] twice here
-            rightwords = word.siblings.filter(tags__name=rtag)
-        if len(rightwords) > 0:
-            rightword = rightwords[0]
-            # print "got sibling %s " % rightword
-            cards.append({'front': word, 'back': rightword})
+    # Multiple choice practice
+    if mode == "multiple":
+        # Return a list with three random flashcard items
+        solutions = FlashCard.objects.all().order_by('?')[:2]
 
-    # for l in left:
-    #  leftwords = l.word_set.order_by('name')
-    #  print leftwords
+        context_dict = {
+            'practice': practice,
+            # 'form': form,
+            'solutions': solutions
+        }
+    # default to "single"
+    else:
+        context_dict = {
+            'practice': practice,
+            # 'form': form,
+        }
 
-        # for word in leftwords:
-        #  rightword = word.siblings.get(tag=l)
-
-    # except:
-    #  return HttpResponseRedirect('/words')
-    # return render_to_response('play.html',
-    #                          {'deck':deck, 'left':leftwords, 'right':right})
-    return render('play.html', {'cards': cards})
+    return render(request, 'flashcard/practice_flashcards.html', context_dict,
+                  context_instance=RequestContext(request))
 
 
-@user_passes_test(lambda u: u.is_superuser)
-def load(request):
-    # if csv file provided, loadcsv
-    if request.method == 'POST':
+# @csrf_protect
+# @login_required
+# def process_rating(request):
+#     if request.method == "POST":
+#         form = RatingForm(request.POST)
+#         if form.is_valid():
+#             practice_item = get_object_or_404(FlashCard,
+#                                               pk=int(form.cleaned_data['id']))
+#             practice_item.set_next_practice(int(form.cleaned_data['rating']))
+#             practice_item.save()
 
-        try:
-            fh = request.FILES['csvfile']
-        except:
-            return HttpResponseRedirect("/")
-
-        # if file == '':
-        # TODO: error checking (correct file type, etc.)
-        #     return HttpResponseRedirect("/")
-
-        try:
-            fh = fh['content'].split('\n')
-        except:
-            pass
-
-        table = csv.reader(fh)
-        headers = table.next()
-        # print "headers: %s" % headers
-
-        for row in table:
-            sibs = []
-            # print "processing %s" % row
-            for i in range(len(row)):
-                if row[i] == "":
-                    continue
-                headertags = headers[i]
-                if headertags == "TAGS":
-                    tags = row[i].split("|")
-                    for tagname in tags:
-                        t, created = Tag.objects.get_or_create(name=tagname)
-                        for sib in sibs:
-                            sib.tags.add(t)
-                else:
-                    # print "creating %s" % row[i]
-                    w, created = Word.objects.get_or_create(name=row[i])
-                    tags = headertags.split('|')
-                    for tagname in tags:
-                        # print "adding tag %s " % tagname
-                        t, created = Tag.objects.get_or_create(name=tagname)
-                        w.tags.add(t)
-
-                    # make sibling of all other words in row
-                    for sib in sibs:
-                        # print "adding siblings %s " % sib
-                        w.siblings.add(sib)
-
-                    sibs.append(w)
-
-    return HttpResponseRedirect("/")
-
-
-@user_passes_test(lambda u: u.is_superuser)
-def import_from_google(request):
-    gd_client = gdata.spreadsheet.service.SpreadsheetsService()
-    gd = gdata.service.GDataService()
-    key = 'pbK5P3b_eaymr4SovVi1mWA'
-    worksheets_feed = gd_client.GetWorksheetsFeed(
-        key, visibility='public', projection='values')
-
-    for entry in worksheets_feed.entry:
-        wksht_id = entry.id.text.rsplit('/', 1)[1]
-
-        list_url = "http://spreadsheets.google.com/feeds/list/%s/%s/public/values" % (
-            key, wksht_id)
-        feed = gd.GetFeed(list_url)
-
-        # get headers from cell feed (because list feed removes special
-        # characters)
-        cell_url = "http://spreadsheets.google.com/feeds/cells/%s/%s/public/values" % (
-            key, wksht_id)
-        cell_feed = gd.GetFeed(cell_url + "?max-row=1")
-
-        headers = []
-        for cell in cell_feed.entry:
-            headers.append(cell.content.text)
-        # print "got headers %s" % headers
-
-        for row in feed.entry:
-            sibs = []
-            cells = row.FindExtensions()
-
-            # print "processing %s" % row
-
-            for i, cell in enumerate(cells):
-                if cell.text is None:
-                    continue
-
-                # print "processing %s" % cell.text
-
-                #headertags = cell.tag
-                headertags = headers[i]
-                # print "got header %s" % headertags
-                if headertags.lower() == "tags":
-                    tags = cell.text.split("|")
-                    for tagname in tags:
-                        t, created = Tag.objects.get_or_create(name=tagname)
-                        for sib in sibs:
-                            sib.tags.add(t)
-                else:
-                    # print "creating %s" % cell.text
-                    w, created = Word.objects.get_or_create(name=cell.text)
-                    tags = headertags.split('|')
-                    for tagname in tags:
-                        # print "adding tag %s " % tagname
-                        t, created = Tag.objects.get_or_create(name=tagname)
-                        w.tags.add(t)
-
-                    # make sibling of all other words in row
-                    for sib in sibs:
-                        # print "adding siblings %s " % sib
-                        w.siblings.add(sib)
-
-                    sibs.append(w)
-
-    return HttpResponseRedirect("/")
-
-
-@user_passes_test(lambda u: u.is_superuser)
-def cleardb(request):
-    if request.method == 'POST':
-        Word.objects.all().delete()
-        Tag.objects.all().delete()
-    return HttpResponseRedirect("/")
+#             return redirect(to='list_flashcards')
+#     else:
+#         return HttpResponseBadRequest("There's nothing here. Haha.")

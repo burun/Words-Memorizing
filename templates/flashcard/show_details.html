@@ -1,0 +1,17 @@
+{% extends "flashcard/base.html" %}
+
+    {% block title %}
+      Flashcard "{{object_detail.front}}"
+    {% endblock %}
+
+    {% block header %}
+      <h1>Flashcard #{{ object_id }}:</h1>
+    {% endblock %}
+
+    {% block content %}
+      <p>{{ object_detail.front }} - {{ object_detail.back }}</p>
+
+      <p>
+
+      </p>
+    {% endblock %}
