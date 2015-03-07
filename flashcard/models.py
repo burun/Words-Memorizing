@@ -6,7 +6,7 @@ from django.db import models
 
 from datetime import datetime, timedelta
 
-# from algorithm import interval
+from flashcard.algorithm import interval
 
 
 class FlashCardByPracticeManager(models.Manager):
@@ -40,7 +40,7 @@ class FlashCard(models.Model):
         verbose_name="Back")
     user = models.ForeignKey(User)
 
-    next_practice = models.DateField(auto_now_add=True)
+    next_practice = models.DateTimeField(auto_now_add=True)
     times_practiced = models.PositiveIntegerField(default=1)
     easy_factor = models.FloatField(default=2.5)
 
@@ -62,14 +62,12 @@ class FlashCard(models.Model):
     def delete(self):
         return ('delete_flashcard', [str(self.id)])
 
-    def set_next_practice(self, rating):
-        if not 0 <= rating <= 5:
-            raise ValidationError("Rating must be in range from 1 to 5")
-        days, ef = interval(self.times_practiced, rating,
-                            self.easy_factor)
-        self.next_practice = datetime.today() + timedelta(days=days)
+    def set_next_practice(self):
+        # days, ef = interval(self.times_practiced, rating,
+        #                     self.easy_factor)
+        self.next_practice = datetime.today() + timedelta(days=1)
         self.times_practiced += 1
-        self.easy_factor = ef
+        # self.easy_factor = ef
 
     def delay(self):
         self.next_practice = datetime.today() + timedelta(days=1)

@@ -98,7 +98,7 @@ def practice_flashcards(request, mode=''):
     Practice a flashcard.
     """
     # Get the latest element you should practice
-    practices = FlashCard.by_practice.filter(user=request.user)
+    practices = FlashCard.objects.order_by('times_practiced')
     if len(practices) == 0:
         return render(request, 'flashcard/practice_flashcards.html', {
             'errors': ['No items to practice']},
@@ -123,6 +123,10 @@ def practice_flashcards(request, mode=''):
             'practice': practice,
             # 'form': form,
         }
+
+    practice_item = get_object_or_404(FlashCard, pk=int(practice.id))
+    practice_item.set_next_practice()
+    practice_item.save()
 
     return render(request, 'flashcard/practice_flashcards.html', context_dict,
                   context_instance=RequestContext(request))

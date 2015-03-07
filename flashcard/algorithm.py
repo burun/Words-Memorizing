@@ -16,6 +16,7 @@
 # You should have received a copy of the GNU General Public License
 # along with django-memorize.  If not, see <http://www.gnu.org/licenses/>.
 
+
 def interval(repition, rating, easy_factor=2.5):
     ef = easy_factor + (0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02))
     ef = ef if ef >= 1.3 else 1.3
@@ -27,7 +28,7 @@ def interval(repition, rating, easy_factor=2.5):
     if repition == 2:
         return 6, ef
 
-    days, ef = interval(repition-1, rating, easy_factor)
+    days, ef = interval(repition - 1, rating, easy_factor)
     days *= easy_factor
     return days, ef
 
