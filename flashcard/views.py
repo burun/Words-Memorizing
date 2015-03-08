@@ -14,7 +14,7 @@ def list_flashcards(request):
     """
     Return a list with flash cards.
     """
-    flashcard_list = FlashCard.objects.filter(user=request.user)
+    flashcard_list = FlashCard.objects.all()
     context_dict = {
         'flashcard_list': flashcard_list
     }
@@ -98,7 +98,7 @@ def practice_flashcards(request, mode=''):
     Practice a flashcard.
     """
     # Get the latest element you should practice
-    practices = FlashCard.objects.order_by('times_practiced')
+    practices = FlashCard.objects.order_by('next_practice')
     if len(practices) == 0:
         return render(request, 'flashcard/practice_flashcards.html', {
             'errors': ['No items to practice']},

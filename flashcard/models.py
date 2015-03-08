@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 from datetime import datetime, timedelta
+from django.utils import timezone
 
 from flashcard.algorithm import interval
 
@@ -40,7 +41,7 @@ class FlashCard(models.Model):
         verbose_name="Back")
     user = models.ForeignKey(User)
 
-    next_practice = models.DateTimeField(auto_now_add=True)
+    next_practice = models.DateTimeField(auto_now=True)
     times_practiced = models.PositiveIntegerField(default=1)
     easy_factor = models.FloatField(default=2.5)
 
@@ -65,7 +66,6 @@ class FlashCard(models.Model):
     def set_next_practice(self):
         # days, ef = interval(self.times_practiced, rating,
         #                     self.easy_factor)
-        self.next_practice = datetime.today() + timedelta(days=1)
         self.times_practiced += 1
         # self.easy_factor = ef
 
