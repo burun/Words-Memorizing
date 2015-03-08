@@ -12,7 +12,7 @@ from flashcard.algorithm import interval
 
 class FlashCardByPracticeManager(models.Manager):
 
-    def get_query_set(self):
+    def get_queryset(self):
         return FlashCard.objects.filter(
             # Return objects with next_practice date earlier than the current
             # time.
@@ -22,7 +22,7 @@ class FlashCardByPracticeManager(models.Manager):
 
 class FlashCardByEasyFactorManager(models.Manager):
 
-    def get_query_set(self):
+    def get_queryset(self):
         return FlashCard.objects.all().order_by('easy_factor')
 
 
