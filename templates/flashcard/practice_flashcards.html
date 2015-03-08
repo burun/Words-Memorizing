@@ -1,4 +1,5 @@
 {% extends "flashcard/base.html" %}
+
 	
 	{% block title %}
         Practice flashcard #{{ flashcard.id }}
@@ -32,6 +33,16 @@
                 <b>Show the answer...</b>
             </div>
         </div>
+
+        <div>
+            <button onclick="RefreshButton()">Next</button>
+        </div>
+
+        <script>
+        function RefreshButton() {
+            location.reload();
+        }
+        </script>
 
         <div class="rating_box">
 <!--  -->
